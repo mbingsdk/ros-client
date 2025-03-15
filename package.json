@@ -23,7 +23,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/sparrow-code/ros-client.git"
+    "url": "git+https://github.com/sparrow-code/ros-client.git"
   },
   "bugs": {
     "url": "https://github.com/sparrow-code/ros-client/issues"
