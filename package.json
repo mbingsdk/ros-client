@@ -1,0 +1,41 @@
+{
+  "name": "ros-client",
+  "version": "1.0.0",
+  "description": "Node.js client for MikroTik RouterOS API with support for plain text and encrypted connections",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [
+    "mikrotik",
+    "routeros",
+    "api",
+    "network",
+    "router",
+    "winbox",
+    "routerboard"
+  ],
+  "author": "Shivam Dwivedi",
+  "license": "MIT",
+  "dependencies": {
+    "crypto": "^1.0.1",
+    "events": "^3.3.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/sparrow-code/ros-client.git"
+  },
+  "bugs": {
+    "url": "https://github.com/sparrow-code/ros-client/issues"
+  },
+  "homepage": "https://github.com/sparrow-code/ros-client#readme",
+  "engines": {
+    "node": ">=10.0.0"
+  },
+  "files": [
+    "index.js",
+    "examples",
+    "README.md",
+    "LICENSE"
+  ]
+}
