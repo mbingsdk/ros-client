@@ -228,10 +228,6 @@ try {
 }
 ```
 
-## Inspiration
-
-This project was inspired by the RouterOS Python API implementation and similar projects in the MikroTik community.
-
 ## License
 
 MIT
