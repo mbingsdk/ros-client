@@ -3,7 +3,7 @@
  * A Node.js module for interacting with MikroTik RouterOS API
  */
 
-const RouterOSClient = require("./lib/client");
+const RouterOSClient = require("./lib/connect");
 const commands = require("./lib/commands");
 
 // Export the main client class
