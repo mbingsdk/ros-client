@@ -4,10 +4,6 @@
  */
 
 const RouterOSClient = require("./lib/connect");
-const commands = require("./lib/commands");
 
-// Export the main client class
+// Export the RouterOS client class
 module.exports = RouterOSClient;
-
-// Export commands as a property
-module.exports.commands = commands;

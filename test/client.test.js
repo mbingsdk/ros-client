@@ -1,49 +1,41 @@
-const RouterOSClient = require("ros-client");
-const {
-  SYSTEM_COMMANDS,
-  INTERFACE_COMMANDS,
-  IP_COMMANDS,
-  QUEUE_COMMANDS,
-  PPP_COMMANDS,
-  TOOLS_COMMANDS,
-  WIRELESS_COMMANDS,
-} = require("./routeros-commands");
+const RouterOSClient = require("../index.js");
 
-// Create API client instance
-const api = new RouterOSClient({
-  host: "192.168.88.1", // Replace with your router IP
-  username: "admin", // Replace with your username
-  password: "password", // Replace with your password
-  debug: false, // Set to true for debugging
-});
-
-// Example usage with different command categories
-async function systemExamples() {
+/**
+ * System examples test function
+ * @param {Object} config RouterOS connection configuration
+ */
+async function systemExamples(config) {
+  const api = new RouterOSClient(config);
   console.log("\n=== SYSTEM EXAMPLES ===");
 
   // Get system identity
-  const identity = await api.send(SYSTEM_COMMANDS.getIdentity);
+  const identity = await api.send(["/system/identity/print"]);
   console.log("Router Identity:", identity[0]?.name || "Unknown");
 
   // Get system resources
-  const resources = await api.send(SYSTEM_COMMANDS.getResources);
+  const resources = await api.send(["/system/resource/print"]);
   console.log("CPU Load:", resources[0]?.["cpu-load"] + "%");
   console.log("Free Memory:", resources[0]?.["free-memory"] + " bytes");
 
   // Get system users
-  const users = await api.send(SYSTEM_COMMANDS.getUsers);
+  const users = await api.send(["/user/print"]);
   console.log("Users:", users.map((user) => user.name).join(", "));
 }
 
-async function interfaceExamples() {
+/**
+ * Interface examples test function
+ * @param {Object} config RouterOS connection configuration
+ */
+async function interfaceExamples(config) {
+  const api = new RouterOSClient(config);
   console.log("\n=== INTERFACE EXAMPLES ===");
 
   // Get all interfaces
-  const interfaces = await api.send(INTERFACE_COMMANDS.getAll);
+  const interfaces = await api.send(["/interface/print"]);
   console.log(`Total interfaces: ${interfaces.length}`);
 
   // Show ethernet interfaces
-  const ethernet = await api.send(INTERFACE_COMMANDS.getEthernet);
+  const ethernet = await api.send(["/interface/ethernet/print"]);
   console.log("Ethernet interfaces:");
   ethernet.forEach((iface) => {
     console.log(
@@ -52,18 +44,23 @@ async function interfaceExamples() {
   });
 }
 
-async function ipExamples() {
+/**
+ * IP examples test function
+ * @param {Object} config RouterOS connection configuration
+ */
+async function ipExamples(config) {
+  const api = new RouterOSClient(config);
   console.log("\n=== IP EXAMPLES ===");
 
   // Get IP addresses
-  const addresses = await api.send(IP_COMMANDS.getAddresses);
+  const addresses = await api.send(["/ip/address/print"]);
   console.log("IP Addresses:");
   addresses.forEach((addr) => {
     console.log(`- ${addr.address} on ${addr.interface}`);
   });
 
   // Get DHCP leases
-  const leases = await api.send(IP_COMMANDS.getDhcpLeases);
+  const leases = await api.send(["/ip/dhcp-server/lease/print"]);
   console.log(`Active DHCP leases: ${leases.length}`);
   leases.slice(0, 5).forEach((lease) => {
     console.log(
@@ -72,11 +69,16 @@ async function ipExamples() {
   });
 }
 
-async function queueExamples() {
+/**
+ * Queue examples test function
+ * @param {Object} config RouterOS connection configuration
+ */
+async function queueExamples(config) {
+  const api = new RouterOSClient(config);
   console.log("\n=== QUEUE EXAMPLES ===");
 
   // Get all simple queues
-  const queues = await api.send(QUEUE_COMMANDS.getSimpleQueues);
+  const queues = await api.send(["/queue/simple/print"]);
   console.log(`Total simple queues: ${queues.length}`);
 
   // Show queue details
@@ -87,28 +89,38 @@ async function queueExamples() {
   });
 }
 
-async function toolExamples() {
+/**
+ * Tool examples test function
+ * @param {Object} config RouterOS connection configuration
+ */
+async function toolExamples(config) {
+  const api = new RouterOSClient(config);
   console.log("\n=== TOOLS EXAMPLES ===");
 
   // Ping example (note: this returns raw ping results)
   console.log("Pinging 8.8.8.8...");
-  const pingResult = await api.send(TOOLS_COMMANDS.ping("8.8.8.8", 3));
+  const pingResult = await api.send(["/ping", "=address=8.8.8.8", "=count=3"]);
   console.log(`Ping results: ${pingResult.length} packets`);
 }
 
 // Main function to run all examples
-async function runExamples() {
+/**
+ * Run all example tests
+ * @param {Object} config RouterOS connection configuration
+ */
+async function runExamples(config) {
+  const api = new RouterOSClient(config);
   try {
     console.log("Connecting to RouterOS...");
     await api.connect();
     console.log("Connected successfully!");
 
     // Run examples
-    await systemExamples();
-    await interfaceExamples();
-    await ipExamples();
-    await queueExamples();
-    await toolExamples();
+    await systemExamples(config);
+    await interfaceExamples(config);
+    await ipExamples(config);
+    await queueExamples(config);
+    await toolExamples(config);
 
     // Close connection
     await api.close();
