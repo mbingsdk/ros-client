@@ -1,6 +1,6 @@
 {
   "name": "ros-client",
-  "version": "1.0.2",
+  "version": "1.0.3",
   "description": "Node.js client for MikroTik RouterOS API with support for plain text and encrypted connections",
   "main": "index.js",
   "scripts": {
