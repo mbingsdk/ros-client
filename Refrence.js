@@ -1,4 +1,23 @@
 /**
+ * RouterOS API Commands Reference Documentation
+ * 
+ * This file contains a comprehensive reference of all RouterOS API commands
+ * organized by category with detailed JSDoc documentation.
+ * 
+ * Each command is provided as either:
+ * - Static array for simple commands: ["/path/to/command"]
+ * - Function for parameterized commands: (param) => ["/path/to/command", "=param=value"]
+ * 
+ * Usage with RouterOS API Client:
+ * const result = await api.send(SYSTEM_COMMANDS.getIdentity);
+ * const result = await api.send(SYSTEM_COMMANDS.setIdentity("new-name"));
+ * 
+ * @version 1.1.0
+ * @author AviStudio (https://github.com/AviStudio)
+ * @contributor RouterOS API Client Library
+ */
+
+/**
  * RouterOS API Commands Reference (with JSDoc)
  *
  * Each command is a function or array, returning the proper array format for the MikroTik API.

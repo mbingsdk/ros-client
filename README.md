@@ -6,6 +6,14 @@
 
 A powerful Node.js module for seamless interaction with MikroTik RouterOS API, supporting both plain text (port 8728) and encrypted (port 8729) connections. 🚀
 
+## 🆕 What's New in v1.1.0
+
+- 📚 **Comprehensive Command Reference** - Complete RouterOS API command reference in `Refrence.js`
+- 🧪 **Production Example** - Enhanced `app.js` with advanced error handling and connectivity testing
+- 🔧 **Improved Buffer Management** - Enhanced buffer handling for better performance
+- 📖 **Enhanced Documentation** - Better examples and troubleshooting guides
+- 💬 **Community Support** - Telegram support group for community assistance
+
 ## ✨ Key Features
 
 - 🔒 Secure connections via plain text and TLS encryption
@@ -57,6 +65,29 @@ async function example() {
 
 example();
 ```
+
+## 📚 Documentation & Examples
+
+### 📖 Command Reference
+
+For a comprehensive list of all available RouterOS API commands with detailed documentation, see the [**Refrence.js**](./Refrence.js) file. This file contains:
+
+- 🔧 **System Commands** - Identity, resources, clock, logging, etc.
+- 🌐 **Interface Management** - Ethernet, wireless, bridge, VLAN, etc.
+- 🌍 **IP Configuration** - Addresses, routes, DNS, DHCP, firewall, etc.
+- 📶 **Wireless Operations** - Registration, scanning, security, etc.
+- 🔒 **Security Features** - Firewall rules, NAT, user management, etc.
+- 📊 **Monitoring Tools** - Traffic, queues, logs, statistics, etc.
+
+### 🧪 Complete Example
+
+For a production-ready example with advanced error handling and connectivity testing, see the [**app.js**](./app.js) file which demonstrates:
+
+- ✅ **Connection Testing** - TCP connectivity validation
+- 🔥 **Advanced Error Handling** - Detailed error categorization and troubleshooting
+- 📊 **Event Monitoring** - Comprehensive event listeners
+- 🚨 **Timeout Management** - Connection and operation timeouts
+- 🔍 **Debug Logging** - Detailed connection and operation logging
 
 ## ⚙️ Configuration Options
 
@@ -193,6 +224,23 @@ We welcome contributions! Here's how:
 3. ✍️ Commit changes (`git commit -m 'Add amazing feature'`)
 4. 📤 Push to branch (`git push origin feature/amazing-feature`)
 5. 📫 Open a Pull Request
+
+## 👥 Contributors
+
+We thank the following contributors for their valuable contributions to this project:
+
+- **[mbingsdk](https://github.com/mbingsdk)** - Update limit buffer functionality 🔧
+- **[AviStudio](https://github.com/AviStudio)** - Command Reference (Refrence.js) documentation 📚
+
+## 💬 Support
+
+Need help or have questions? Join our community:
+
+📲 **Telegram Support Group**: [https://t.me/ros_client](https://t.me/ros_client)
+
+## 📋 Changelog
+
+For detailed information about changes in each version, see the [CHANGELOG.md](./CHANGELOG.md) file.
 
 ---
 
