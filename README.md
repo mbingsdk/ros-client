@@ -6,8 +6,10 @@
 
 A powerful Node.js module for seamless interaction with MikroTik RouterOS API, supporting both plain text (port 8728) and encrypted (port 8729) connections. 🚀
 
-## 🆕 What's New in v1.1.0
+## 🆕 What's New in v1.1.2
 
+- 📦 **Package Configuration** - Fixed npm README detection issue  
+- 🔧 **Publishing** - Enhanced package.json metadata for better npm registry recognition
 - 📚 **Comprehensive Command Reference** - Complete RouterOS API command reference in `Refrence.js`
 - 🧪 **Production Example** - Enhanced `app.js` with advanced error handling and connectivity testing
 - 🔧 **Improved Buffer Management** - Enhanced buffer handling for better performance

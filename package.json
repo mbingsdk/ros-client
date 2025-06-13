@@ -1,8 +1,10 @@
 {
   "name": "ros-client",
-  "version": "1.1.1",
+  "version": "1.1.2",
   "description": "Node.js client for MikroTik RouterOS API with support for plain text and encrypted connections",
   "main": "index.js",
+  "readme": "README.md",
+  "readmeFilename": "README.md",
   "scripts": {
     "test": "echo \"Tests are exported as functions and can be imported for testing.\" && exit 0"
   },
@@ -41,13 +43,12 @@
     "node": ">=10.0.0"
   },
   "files": [
-    "index.js",
-    "lib",
-    "examples",
-    "app.js",
-    "Refrence.js",
     "README.md",
     "CHANGELOG.md",
-    "LICENSE"
+    "LICENSE",
+    "index.js",
+    "lib/",
+    "app.js",
+    "Refrence.js"
   ]
 }

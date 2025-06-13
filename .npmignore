@@ -1,0 +1,24 @@
+# Ignore node_modules and build outputs
+node_modules/
+*.log
+*.tmp
+.DS_Store
+Thumbs.db
+
+# Ignore development files
+test/
+tests/
+.git/
+.gitignore
+.vscode/
+.idea/
+
+# Keep these files for npm package
+!README.md
+!CHANGELOG.md
+!LICENSE
+!index.js
+!lib/
+!app.js
+!Refrence.js
+!package.json
