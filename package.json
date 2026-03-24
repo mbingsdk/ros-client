@@ -2,7 +2,7 @@
   "name": "ros-client",
   "version": "1.1.2",
   "description": "Node.js client for MikroTik RouterOS API with support for plain text and encrypted connections",
-  "main": "index.js",
+  "main": "index.ts",
   "readme": "README.md",
   "readmeFilename": "README.md",
   "scripts": {
@@ -26,6 +26,12 @@
   ],
   "author": "Shivam Dwivedi",
   "license": "MIT",
+  "devDependencies": {
+    "@types/node": "^20.5.6",
+    "nodemon": "^3.1.10",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.9.3"
+  },
   "dependencies": {
     "crypto": "^1.0.1",
     "events": "^3.3.0",
@@ -46,9 +52,9 @@
     "README.md",
     "CHANGELOG.md",
     "LICENSE",
-    "index.js",
+    "index.ts",
     "lib/",
-    "app.js",
-    "Refrence.js"
+    "app.ts",
+    "Refrence.ts"
   ]
 }
