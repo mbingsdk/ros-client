@@ -1,10 +1,48 @@
-const net = require("net");
-const tls = require("tls");
-const iconv = require("iconv-lite");
-const { EventEmitter } = require("events");
+import { EventEmitter } from "events";
+import * as net from "net";
+import * as tls from "tls";
+import * as iconv from "iconv-lite";
 
-class RouterOSClient extends EventEmitter {
-  constructor(options = {}) {
+// ===================== TYPE DEFINITIONS =====================
+
+interface RouterOSClientOptions {
+  host?: string;
+  port?: number;
+  username?: string;
+  password?: string;
+  timeout?: number;
+  tls?: boolean;
+  debug?: boolean;
+}
+
+interface RouterOSResponse {
+  error: string | null;
+  data: RouterOSData[];
+  raw: string[][];
+}
+
+type RouterOSData = Record<string, string>;
+
+type ResponseCallback = (response: RouterOSResponse) => void;
+
+// ===================== ROUTEROS CLIENT =====================
+
+export class RouterOSClient extends EventEmitter {
+  private host: string;
+  private port: number;
+  private username: string;
+  private password: string;
+  private timeout: number;
+  private tls: boolean;
+  private socket: net.Socket | tls.TLSSocket | null;
+  private connected: boolean;
+  private buffer: Buffer;
+  private currentRequest: ResponseCallback | null;
+  private debug: boolean;
+  private sentences: string[][];
+  private currentSentence: string[] | null;
+
+  constructor(options: RouterOSClientOptions = {}) {
     super();
     this.host = options.host || "192.168.88.1";
     this.port = options.port || 8728;
@@ -19,9 +57,10 @@ class RouterOSClient extends EventEmitter {
     this.currentRequest = null;
     this.debug = options.debug || false;
     this.sentences = [];
+    this.currentSentence = null;
   }
 
-  connect() {
+  connect(): Promise<RouterOSClient> {
     return new Promise((resolve, reject) => {
       if (this.socket) {
         this.socket.destroy();
@@ -55,12 +94,12 @@ class RouterOSClient extends EventEmitter {
         this._login().then(resolve).catch(reject);
       });
 
-      this.socket.on("data", (data) => {
+      this.socket.on("data", (data: Buffer) => {
         this.buffer = Buffer.concat([this.buffer, data]);
         this._parseResponse();
       });
 
-      this.socket.on("error", (err) => {
+      this.socket.on("error", (err: Error) => {
         clearTimeout(timeoutId);
         this.emit("error", err);
         reject(err);
@@ -73,11 +112,11 @@ class RouterOSClient extends EventEmitter {
     });
   }
 
-  _login() {
+  private _login(): Promise<RouterOSClient> {
     return new Promise((resolve, reject) => {
-      this.sentences = []; // Clear any previous data
+      this.sentences = [];
 
-      this._sendCommand(["/login"], (response) => {
+      this._sendCommand(["/login"], (response: RouterOSResponse) => {
         if (response.error) {
           reject(new Error(response.error));
           return;
@@ -85,10 +124,9 @@ class RouterOSClient extends EventEmitter {
 
         if (this.debug) console.log("Login response:", response);
 
-        // Modern login method (v6.43+)
         this._sendCommand(
           ["/login", `=name=${this.username}`, `=password=${this.password}`],
-          (loginResponse) => {
+          (loginResponse: RouterOSResponse) => {
             if (this.debug) console.log("Auth response:", loginResponse);
 
             if (loginResponse.error) {
@@ -104,17 +142,16 @@ class RouterOSClient extends EventEmitter {
     });
   }
 
-  send(words) {
+  send(words: string[]): Promise<RouterOSData[]> {
     return new Promise((resolve, reject) => {
       if (!this.connected) {
         reject(new Error("Not connected"));
         return;
       }
 
-      // Clear previous response data
       this.sentences = [];
 
-      this._sendCommand(words, (response) => {
+      this._sendCommand(words, (response: RouterOSResponse) => {
         if (response.error) {
           reject(new Error(response.error));
         } else {
@@ -124,7 +161,7 @@ class RouterOSClient extends EventEmitter {
     });
   }
 
-  close() {
+  close(): Promise<void> {
     return new Promise((resolve) => {
       if (this.socket) {
         this.socket.end();
@@ -139,38 +176,32 @@ class RouterOSClient extends EventEmitter {
     });
   }
 
-  _parseResponse() {
+  private _parseResponse(): void {
     while (this.buffer.length > 0) {
       const length = this._readLength();
       if (length === null) break;
 
       if (length === 0) {
-        // End of sentence
         if (!this.currentSentence) {
           this.currentSentence = [];
         }
 
-        // Only add non-empty sentences
         if (this.currentSentence.length > 0) {
           this.sentences.push(this.currentSentence);
         }
 
-        // Reset for next sentence
         this.currentSentence = [];
 
-        // Check if we have !done, which indicates end of response
         const lastSentence = this.sentences[this.sentences.length - 1];
         if (lastSentence && lastSentence[0] === "!done") {
           this._processCompleteResponse();
         }
       } else {
-        // Read word data
         if (this.buffer.length < length) break;
 
         const word = iconv.decode(this.buffer.slice(0, length), "utf-8");
         this.buffer = this.buffer.slice(length);
 
-        // Initialize current sentence if needed
         if (!this.currentSentence) {
           this.currentSentence = [];
         }
@@ -180,14 +211,13 @@ class RouterOSClient extends EventEmitter {
     }
   }
 
-  _processCompleteResponse() {
+  private _processCompleteResponse(): void {
     if (!this.currentRequest) return;
 
     const callback = this.currentRequest;
     this.currentRequest = null;
 
-    // Check for trap/error
-    let error = null;
+    let error: string | null = null;
     for (const sentence of this.sentences) {
       if (sentence[0] === "!trap") {
         const msgItem = sentence.find((word) => word.startsWith("=message="));
@@ -200,11 +230,10 @@ class RouterOSClient extends EventEmitter {
       }
     }
 
-    // Convert !re sentences to data objects
-    const data = [];
+    const data: RouterOSData[] = [];
     for (const sentence of this.sentences) {
       if (sentence[0] === "!re") {
-        const item = {};
+        const item: RouterOSData = {};
         for (const word of sentence.slice(1)) {
           if (word.startsWith("=")) {
             const equalPos = word.indexOf("=", 1);
@@ -221,11 +250,9 @@ class RouterOSClient extends EventEmitter {
       }
     }
 
-    // Clear sentences for next command
     const rawSentences = [...this.sentences];
     this.sentences = [];
 
-    // Return the result
     callback({
       error: error,
       data: data,
@@ -233,30 +260,39 @@ class RouterOSClient extends EventEmitter {
     });
   }
 
-  _readLength() {
+  private _readLength(): number | null {
     if (this.buffer.length < 1) return null;
 
     const b = this.buffer[0];
-    let len, size;
+    let len: number;
+    let size: number;
 
     if ((b & 0x80) === 0x00) {
       len = b;
       size = 1;
-    } else if ((b & 0xC0) === 0x80) {
+    } else if ((b & 0xc0) === 0x80) {
       if (this.buffer.length < 2) return null;
-      len = ((b & ~0xC0) << 8) + this.buffer[1];
+      len = ((b & ~0xc0) << 8) + this.buffer[1];
       size = 2;
-    } else if ((b & 0xE0) === 0xC0) {
+    } else if ((b & 0xe0) === 0xc0) {
       if (this.buffer.length < 3) return null;
-      len = ((b & ~0xE0) << 16) + (this.buffer[1] << 8) + this.buffer[2];
+      len = ((b & ~0xe0) << 16) + (this.buffer[1] << 8) + this.buffer[2];
       size = 3;
-    } else if ((b & 0xF0) === 0xE0) {
+    } else if ((b & 0xf0) === 0xe0) {
       if (this.buffer.length < 4) return null;
-      len = ((b & ~0xF0) << 24) + (this.buffer[1] << 16) + (this.buffer[2] << 8) + this.buffer[3];
+      len =
+        ((b & ~0xf0) << 24) +
+        (this.buffer[1] << 16) +
+        (this.buffer[2] << 8) +
+        this.buffer[3];
       size = 4;
-    } else if (b === 0xF0) {
+    } else if (b === 0xf0) {
       if (this.buffer.length < 5) return null;
-      len = (this.buffer[1] << 24) + (this.buffer[2] << 16) + (this.buffer[3] << 8) + this.buffer[4];
+      len =
+        (this.buffer[1] << 24) +
+        (this.buffer[2] << 16) +
+        (this.buffer[3] << 8) +
+        this.buffer[4];
       size = 5;
     } else {
       throw new Error("Invalid length byte");
@@ -268,8 +304,8 @@ class RouterOSClient extends EventEmitter {
     return len;
   }
 
-  _writeLength(length) {
-    const bytes = [];
+  private _writeLength(length: number): Buffer {
+    const bytes: number[] = [];
 
     while (true) {
       let byte = length & 0x7f;
@@ -286,22 +322,29 @@ class RouterOSClient extends EventEmitter {
     return Buffer.from(bytes);
   }
 
-  _encodeWord(word) {
+  private _encodeWord(word: string): Buffer {
     const wordBuf = Buffer.from(word, "utf8");
     const lengthBuf = this._writeLength(wordBuf.length);
     return Buffer.concat([lengthBuf, wordBuf]);
   }
 
-  _sendCommand(words, callback) {
+  private _sendCommand(words: string[], callback: ResponseCallback): void {
     this.currentRequest = callback;
 
     const data = Buffer.concat([
       ...words.map((word) => this._encodeWord(word)),
-      this._writeLength(0), // End of sentence
+      this._writeLength(0),
     ]);
 
-    this.socket.write(data);
+    this.socket!.write(data);
   }
 }
 
-module.exports = RouterOSClient;
+// ===================== EXPORTS =====================
+
+export type {
+  RouterOSClientOptions,
+  RouterOSResponse,
+  RouterOSData,
+  ResponseCallback,
+};

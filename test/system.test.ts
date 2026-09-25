@@ -1,10 +1,16 @@
-const RouterOSClient = require("../lib/connect.js");
-
 /**
- * System identity test function
- * @param {Object} config RouterOS connection configuration
+ * RouterOS API Client - System Tests
+ * 
+ * Basic test suite for verifying RouterOS API connectivity and core operations.
+ * Each test creates its own connection and properly cleans up afterwards.
+ * 
+ * @version 2.0.0
+ * @author RouterOS API Client Library
  */
-async function systemIdentityTest(config) {
+
+import { RouterOSClient, RouterOSClientOptions } from "../lib/connect";
+
+async function systemIdentityTest(config: RouterOSClientOptions): Promise<void> {
   const api = new RouterOSClient(config);
   try {
     console.log("\n=== SYSTEM IDENTITY TEST ===");
@@ -16,11 +22,7 @@ async function systemIdentityTest(config) {
   }
 }
 
-/**
- * Interface list test function
- * @param {Object} config RouterOS connection configuration
- */
-async function interfaceListTest(config) {
+async function interfaceListTest(config: RouterOSClientOptions): Promise<void> {
   const api = new RouterOSClient(config);
   try {
     console.log("\n=== INTERFACE LIST TEST ===");
@@ -32,11 +34,7 @@ async function interfaceListTest(config) {
   }
 }
 
-/**
- * System resource test function
- * @param {Object} config RouterOS connection configuration
- */
-async function systemResourceTest(config) {
+async function systemResourceTest(config: RouterOSClientOptions): Promise<void> {
   const api = new RouterOSClient(config);
   try {
     console.log("\n=== SYSTEM RESOURCE TEST ===");
@@ -48,11 +46,7 @@ async function systemResourceTest(config) {
   }
 }
 
-/**
- * Run all system tests
- * @param {Object} config RouterOS connection configuration
- */
-async function runTests(config) {
+async function runTests(config: RouterOSClientOptions): Promise<void> {
   try {
     console.log("Running tests sequentially...");
     await systemIdentityTest(config);
@@ -60,12 +54,11 @@ async function runTests(config) {
     await interfaceListTest(config);
     console.log("\nAll tests completed.");
   } catch (err) {
-    console.error("Error:", err.message);
+    console.error("Error:", (err as Error).message);
   }
 }
 
-// Export functions for individual use
-module.exports = {
+export {
   systemIdentityTest,
   systemResourceTest,
   interfaceListTest,
