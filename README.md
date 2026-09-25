@@ -233,6 +233,7 @@ We thank the following contributors for their valuable contributions to this pro
 
 - **[mbingsdk](https://github.com/mbingsdk)** - Update limit buffer functionality 🔧
 - **[AviStudio](https://github.com/AviStudio)** - Command Reference (Refrence.js) documentation 📚
+- **[coorvus](https://github.com/coorvus)** - For Adding TypeScript
 
 ## 💬 Support
 
