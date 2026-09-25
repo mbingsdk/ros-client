@@ -35,8 +35,8 @@ interface ErrorWithCode extends Error {
 
 const config: ConnectionConfig = {
   host: "192.168.1.2",
-  username: "sdworlld",
-  password: "Shivam!024@",
+  username: "username",
+  password: "password",
   port: 8728,
   debug: true,
 };
