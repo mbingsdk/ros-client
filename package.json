@@ -6,7 +6,8 @@
   "readme": "README.md",
   "readmeFilename": "README.md",
   "scripts": {
-    "test": "echo \"Tests are exported as functions and can be imported for testing.\" && exit 0"
+    "test": "ts-node test/parser-fragmentation.test.ts",
+    "test:hotspot": "ts-node test/hotspot-user-dump.ts"
   },
   "keywords": [
     "mikrotik",
