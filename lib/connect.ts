@@ -1,7 +1,6 @@
 import { EventEmitter } from "events";
 import * as net from "net";
 import * as tls from "tls";
-import * as iconv from "iconv-lite";
 
 // ===================== TYPE DEFINITIONS =====================
 
@@ -25,6 +24,11 @@ type RouterOSData = Record<string, string>;
 
 type ResponseCallback = (response: RouterOSResponse) => void;
 
+type LengthFrame = {
+  length: number;
+  size: number;
+};
+
 // ===================== ROUTEROS CLIENT =====================
 
 export class RouterOSClient extends EventEmitter {
@@ -40,7 +44,7 @@ export class RouterOSClient extends EventEmitter {
   private currentRequest: ResponseCallback | null;
   private debug: boolean;
   private sentences: string[][];
-  private currentSentence: string[] | null;
+  private currentSentence: string[];
 
   constructor(options: RouterOSClientOptions = {}) {
     super();
@@ -57,7 +61,7 @@ export class RouterOSClient extends EventEmitter {
     this.currentRequest = null;
     this.debug = options.debug || false;
     this.sentences = [];
-    this.currentSentence = null;
+    this.currentSentence = [];
   }
 
   connect(): Promise<RouterOSClient> {
@@ -66,6 +70,11 @@ export class RouterOSClient extends EventEmitter {
         this.socket.destroy();
         this.socket = null;
       }
+
+      this.buffer = Buffer.alloc(0);
+      this.sentences = [];
+      this.currentSentence = [];
+      this.currentRequest = null;
 
       const timeoutId = setTimeout(() => {
         if (this.socket) {
@@ -96,7 +105,11 @@ export class RouterOSClient extends EventEmitter {
 
       this.socket.on("data", (data: Buffer) => {
         this.buffer = Buffer.concat([this.buffer, data]);
-        this._parseResponse();
+        try {
+          this._parseResponse();
+        } catch (err) {
+          this.emit("error", err);
+        }
       });
 
       this.socket.on("error", (err: Error) => {
@@ -115,6 +128,7 @@ export class RouterOSClient extends EventEmitter {
   private _login(): Promise<RouterOSClient> {
     return new Promise((resolve, reject) => {
       this.sentences = [];
+      this.currentSentence = [];
 
       this._sendCommand(["/login"], (response: RouterOSResponse) => {
         if (response.error) {
@@ -149,7 +163,13 @@ export class RouterOSClient extends EventEmitter {
         return;
       }
 
+      if (this.currentRequest) {
+        reject(new Error("Another RouterOS command is already in progress"));
+        return;
+      }
+
       this.sentences = [];
+      this.currentSentence = [];
 
       this._sendCommand(words, (response: RouterOSResponse) => {
         if (response.error) {
@@ -178,14 +198,20 @@ export class RouterOSClient extends EventEmitter {
 
   private _parseResponse(): void {
     while (this.buffer.length > 0) {
-      const length = this._readLength();
-      if (length === null) break;
+      const frame = this._peekLength();
+      if (frame === null) break;
+
+      const { length, size } = frame;
+      const totalSize = size + length;
+
+      // TCP is a byte stream. A RouterOS word can be split anywhere, including
+      // between its length prefix and payload. Do not consume anything until
+      // the complete word is available.
+      if (this.buffer.length < totalSize) break;
+
+      this.buffer = this.buffer.slice(size);
 
       if (length === 0) {
-        if (!this.currentSentence) {
-          this.currentSentence = [];
-        }
-
         if (this.currentSentence.length > 0) {
           this.sentences.push(this.currentSentence);
         }
@@ -196,35 +222,32 @@ export class RouterOSClient extends EventEmitter {
         if (lastSentence && lastSentence[0] === "!done") {
           this._processCompleteResponse();
         }
-      } else {
-        if (this.buffer.length < length) break;
-
-        const word = iconv.decode(this.buffer.slice(0, length), "utf-8");
-        this.buffer = this.buffer.slice(length);
-
-        if (!this.currentSentence) {
-          this.currentSentence = [];
-        }
-
-        this.currentSentence.push(word);
+        continue;
       }
+
+      const word = this.buffer.slice(0, length).toString("utf8");
+      this.buffer = this.buffer.slice(length);
+      this.currentSentence.push(word);
     }
   }
 
   private _processCompleteResponse(): void {
-    if (!this.currentRequest) return;
+    if (!this.currentRequest) {
+      this.sentences = [];
+      return;
+    }
 
     const callback = this.currentRequest;
     this.currentRequest = null;
 
     let error: string | null = null;
     for (const sentence of this.sentences) {
-      if (sentence[0] === "!trap") {
+      if (sentence[0] === "!trap" || sentence[0] === "!fatal") {
         const msgItem = sentence.find((word) => word.startsWith("=message="));
         if (msgItem) {
           error = msgItem.substring(9);
         } else {
-          error = "Unknown error";
+          error = sentence[0] === "!fatal" ? "Fatal RouterOS error" : "Unknown error";
         }
         break;
       }
@@ -244,82 +267,113 @@ export class RouterOSClient extends EventEmitter {
             }
           }
         }
-        if (Object.keys(item).length > 0) {
-          data.push(item);
-        }
+        data.push(item);
       }
     }
 
-    const rawSentences = [...this.sentences];
+    const rawSentences = this.sentences;
     this.sentences = [];
 
     callback({
-      error: error,
-      data: data,
+      error,
+      data,
       raw: rawSentences,
     });
   }
 
-  private _readLength(): number | null {
+  private _peekLength(): LengthFrame | null {
     if (this.buffer.length < 1) return null;
 
     const b = this.buffer[0];
-    let len: number;
-    let size: number;
 
     if ((b & 0x80) === 0x00) {
-      len = b;
-      size = 1;
-    } else if ((b & 0xc0) === 0x80) {
-      if (this.buffer.length < 2) return null;
-      len = ((b & ~0xc0) << 8) + this.buffer[1];
-      size = 2;
-    } else if ((b & 0xe0) === 0xc0) {
-      if (this.buffer.length < 3) return null;
-      len = ((b & ~0xe0) << 16) + (this.buffer[1] << 8) + this.buffer[2];
-      size = 3;
-    } else if ((b & 0xf0) === 0xe0) {
-      if (this.buffer.length < 4) return null;
-      len =
-        ((b & ~0xf0) << 24) +
-        (this.buffer[1] << 16) +
-        (this.buffer[2] << 8) +
-        this.buffer[3];
-      size = 4;
-    } else if (b === 0xf0) {
-      if (this.buffer.length < 5) return null;
-      len =
-        (this.buffer[1] << 24) +
-        (this.buffer[2] << 16) +
-        (this.buffer[3] << 8) +
-        this.buffer[4];
-      size = 5;
-    } else {
-      throw new Error("Invalid length byte");
+      return { length: b, size: 1 };
     }
 
-    if (this.buffer.length < size) return null;
+    if ((b & 0xc0) === 0x80) {
+      if (this.buffer.length < 2) return null;
+      return {
+        length: ((b & 0x3f) << 8) | this.buffer[1],
+        size: 2,
+      };
+    }
 
-    this.buffer = this.buffer.slice(size);
-    return len;
+    if ((b & 0xe0) === 0xc0) {
+      if (this.buffer.length < 3) return null;
+      return {
+        length: ((b & 0x1f) << 16) | (this.buffer[1] << 8) | this.buffer[2],
+        size: 3,
+      };
+    }
+
+    if ((b & 0xf0) === 0xe0) {
+      if (this.buffer.length < 4) return null;
+      return {
+        length:
+          (((b & 0x0f) << 24) |
+            (this.buffer[1] << 16) |
+            (this.buffer[2] << 8) |
+            this.buffer[3]) >>> 0,
+        size: 4,
+      };
+    }
+
+    if (b === 0xf0) {
+      if (this.buffer.length < 5) return null;
+      return {
+        length: this.buffer.readUInt32BE(1),
+        size: 5,
+      };
+    }
+
+    throw new Error(`Invalid RouterOS length prefix: 0x${b.toString(16)}`);
+  }
+
+  private _readLength(): number | null {
+    const frame = this._peekLength();
+    if (frame === null) return null;
+
+    this.buffer = this.buffer.slice(frame.size);
+    return frame.length;
   }
 
   private _writeLength(length: number): Buffer {
-    const bytes: number[] = [];
-
-    while (true) {
-      let byte = length & 0x7f;
-      length = length >> 7;
-
-      if (length === 0) {
-        bytes.push(byte);
-        break;
-      } else {
-        bytes.push(byte | 0x80);
-      }
+    if (!Number.isSafeInteger(length) || length < 0 || length > 0xffffffff) {
+      throw new RangeError("RouterOS word length must be between 0 and 0xffffffff");
     }
 
-    return Buffer.from(bytes);
+    if (length < 0x80) {
+      return Buffer.from([length]);
+    }
+
+    if (length < 0x4000) {
+      const value = length | 0x8000;
+      return Buffer.from([(value >> 8) & 0xff, value & 0xff]);
+    }
+
+    if (length < 0x200000) {
+      const value = length | 0xc00000;
+      return Buffer.from([
+        (value >> 16) & 0xff,
+        (value >> 8) & 0xff,
+        value & 0xff,
+      ]);
+    }
+
+    if (length < 0x10000000) {
+      const value = (length | 0xe0000000) >>> 0;
+      return Buffer.from([
+        (value >>> 24) & 0xff,
+        (value >>> 16) & 0xff,
+        (value >>> 8) & 0xff,
+        value & 0xff,
+      ]);
+    }
+
+    const result = Buffer.allocUnsafe(5);
+    result[0] = 0xf0;
+    result.writeUInt32BE(length >>> 0, 1);
+    return result;
   }
 
   private _encodeWord(word: string): Buffer {
@@ -329,6 +383,14 @@ export class RouterOSClient extends EventEmitter {
   }
 
   private _sendCommand(words: string[], callback: ResponseCallback): void {
+    if (!this.socket || this.socket.destroyed) {
+      throw new Error("Socket is not connected");
+    }
+
+    if (this.currentRequest) {
+      throw new Error("Another RouterOS command is already in progress");
+    }
+
     this.currentRequest = callback;
 
     const data = Buffer.concat([
@@ -336,7 +398,7 @@ export class RouterOSClient extends EventEmitter {
       this._writeLength(0),
     ]);
 
-    this.socket!.write(data);
+    this.socket.write(data);
   }
 }
 
